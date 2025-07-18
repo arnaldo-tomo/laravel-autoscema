@@ -1,7 +1,7 @@
 <?php
 
 namespace ArnaldoTomo\LaravelAutoSchema;
-use ArnaldoTomo\LaravelAutoSchema\ModelAnalyzer;
+
 use ArnaldoTomo\LaravelAutoSchema\Commands\GenerateTypesCommand;
 use ArnaldoTomo\LaravelAutoSchema\Commands\WatchTypesCommand;
 use ArnaldoTomo\LaravelAutoSchema\Commands\InitCommand;
@@ -14,8 +14,17 @@ class AutoSchemaServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $this->bootCommands();
-        $this->bootPublishing();
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                GenerateTypesCommand::class,
+                WatchTypesCommand::class,
+                InitCommand::class,
+            ]);
+        }
+
+        $this->publishes([
+            __DIR__.'/../config/autoscema.php' => config_path('autoscema.php'),
+        ], 'autoscema-config');
     }
 
     /**
@@ -25,37 +34,10 @@ class AutoSchemaServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../config/autoscema.php', 'autoscema');
 
-        $this->app->singleton(TypeGenerator::class);
+        // Register services lazily to avoid early resolution
         $this->app->singleton(ModelAnalyzer::class);
         $this->app->singleton(ValidationAnalyzer::class);
         $this->app->singleton(SchemaBuilder::class);
-    }
-
-    /**
-     * Bootstrap commands.
-     */
-    private function bootCommands(): void
-    {
-        if ($this->app->runningInConsole()) {
-            $this->commands([
-                GenerateTypesCommand::class,
-                WatchTypesCommand::class,
-                InitCommand::class,
-            ]);
-        }
-    }
-
-    /**
-     * Bootstrap publishing.
-     */
-    private function bootPublishing(): void
-    {
-        $this->publishes([
-            __DIR__.'/../config/autoscema.php' => config_path('autoscema.php'),
-        ], 'autoscema-config');
-
-        $this->publishes([
-            __DIR__.'/../stubs' => resource_path('stubs/autoscema'),
-        ], 'autoscema-stubs');
+        $this->app->singleton(TypeGenerator::class);
     }
 }
