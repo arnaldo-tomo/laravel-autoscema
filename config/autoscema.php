@@ -20,6 +20,7 @@ return [
     'models' => [
         'directories' => [
             app_path('Models'),
+              app_path(), 
         ],
         'base_model' => 'Illuminate\\Database\\Eloquent\\Model',
         'exclude' => [
