@@ -1,6 +1,6 @@
 {
     "name": "arnaldo-tomo/laravel-autoscema",
-    "description": "Automatically generate TypeScript types and validation schemas from Laravel Models with zero configuration",
+ "description": "Automatically generate TypeScript types and validation schemas from Laravel Models with zero configuration",
     "type": "library",
     "license": "MIT",
     "keywords": [
