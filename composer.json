@@ -27,7 +27,7 @@
     "illuminate/support": ">=9.0 <21.0",
     "illuminate/console": ">=9.0 <21.0",
     "illuminate/database": ">=9.0 <21.0",
-    "nikic/php-parser": "^4.15",
+  "nikic/php-parser": "^4.15 || ^5.0",
     "symfony/finder": "^6.0|^7.0"
 },
 "require-dev": {
