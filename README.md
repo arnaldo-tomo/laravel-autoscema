@@ -34,7 +34,8 @@ php artisan schema:init
 ### Generate Types
 
 ```bash
-php artisan schema:generate
+# Generate for specific models
+php artisan schema:generate --model=User --model=Post
 ```
 
 That's it! Your TypeScript types are ready in `resources/js/types/`.
@@ -129,7 +130,7 @@ export type CreateUserInput = z.infer<typeof createUserSchema>;
 
 ```bash
 # Generate all types
-php artisan schema:generate
+
 
 # Generate for specific models
 php artisan schema:generate --model=User --model=Post
@@ -534,7 +535,7 @@ Please see [CHANGELOG.md](CHANGELOG.md) for recent changes.
 
 ## 🛡️ Security
 
-If you discover any security-related issues, please email arnaldo@example.com instead of using the issue tracker.
+If you discover any security-related issues, please email me@arnaldotomo.dev instead of using the issue tracker.
 
 ## 📄 License
 
