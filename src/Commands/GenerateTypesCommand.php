@@ -4,6 +4,7 @@ namespace ArnaldoTomo\LaravelAutoSchema\Commands;
 
 use ArnaldoTomo\LaravelAutoSchema\ModelAnalyzer;
 use ArnaldoTomo\LaravelAutoSchema\TypeGenerator;
+use ArnaldoTomo\LaravelAutoSchema\SchemaBuilder;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\File;
 use Symfony\Component\Finder\Finder;
@@ -24,16 +25,6 @@ class GenerateTypesCommand extends Command
      */
     protected $description = 'Generate TypeScript types from Laravel models';
 
-    private ModelAnalyzer $analyzer;
-    private TypeGenerator $generator;
-
-    public function __construct(ModelAnalyzer $analyzer, TypeGenerator $generator)
-    {
-        parent::__construct();
-        $this->analyzer = $analyzer;
-        $this->generator = $generator;
-    }
-
     /**
      * Execute the console command.
      */
@@ -43,6 +34,11 @@ class GenerateTypesCommand extends Command
         $this->newLine();
 
         try {
+            // Create analyzers manually to avoid dependency injection issues
+            $analyzer = new ModelAnalyzer();
+            $schemaBuilder = new SchemaBuilder();
+            $generator = new TypeGenerator($schemaBuilder);
+
             $models = $this->discoverModels();
             
             if (empty($models)) {
@@ -57,10 +53,10 @@ class GenerateTypesCommand extends Command
             $this->newLine();
 
             if ($this->option('dry-run')) {
-                return $this->dryRun($models);
+                return $this->dryRun($models, $analyzer);
             }
 
-            return $this->generateTypes($models);
+            return $this->generateTypes($models, $analyzer, $generator);
 
         } catch (\Exception $e) {
             $this->error("❌ Error: " . $e->getMessage());
@@ -201,12 +197,12 @@ class GenerateTypesCommand extends Command
     /**
      * Perform dry run.
      */
-    private function dryRun(array $models): int
+    private function dryRun(array $models, ModelAnalyzer $analyzer): int
     {
         $this->info("🔍 Dry run mode - analyzing models:");
         $this->newLine();
 
-        $outputPath = config('autoscema.output.path');
+        $outputPath = config('autoscema.output.path', resource_path('js/types'));
         $this->info("📁 Output directory: {$outputPath}");
         $this->newLine();
 
@@ -214,7 +210,7 @@ class GenerateTypesCommand extends Command
             $this->info("🔍 Analyzing: " . class_basename($modelClass));
             
             try {
-                $modelData = $this->analyzer->analyze($modelClass);
+                $modelData = $analyzer->analyze($modelClass);
                 
                 $this->line("   Table: {$modelData['table']}");
                 $this->line("   Properties: " . count($modelData['properties']));
@@ -240,7 +236,7 @@ class GenerateTypesCommand extends Command
     /**
      * Generate types for models.
      */
-    private function generateTypes(array $models): int
+    private function generateTypes(array $models, ModelAnalyzer $analyzer, TypeGenerator $generator): int
     {
         $this->info("🔄 Analyzing models and generating types...");
         $this->newLine();
@@ -255,7 +251,7 @@ class GenerateTypesCommand extends Command
         foreach ($models as $modelClass) {
             try {
                 $progressBar->setMessage("Analyzing " . class_basename($modelClass));
-                $analyzed = $this->analyzer->analyze($modelClass);
+                $analyzed = $analyzer->analyze($modelClass);
                 $modelData[] = $analyzed;
                 
                 $progressBar->advance();
@@ -285,9 +281,9 @@ class GenerateTypesCommand extends Command
         $this->info("📝 Generating TypeScript files...");
         
         try {
-            $this->generator->generateAll($modelData);
+            $generator->generateAll($modelData);
             
-            $outputPath = config('autoscema.output.path');
+            $outputPath = config('autoscema.output.path', resource_path('js/types'));
             $this->info("✅ TypeScript types generated successfully!");
             $this->info("📁 Files created in: {$outputPath}");
             $this->newLine();

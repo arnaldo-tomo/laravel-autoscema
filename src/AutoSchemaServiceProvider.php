@@ -14,6 +14,7 @@ class AutoSchemaServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Register commands only if running in console
         if ($this->app->runningInConsole()) {
             $this->commands([
                 GenerateTypesCommand::class,
@@ -22,9 +23,15 @@ class AutoSchemaServiceProvider extends ServiceProvider
             ]);
         }
 
+        // Publish configuration
         $this->publishes([
             __DIR__.'/../config/autoscema.php' => config_path('autoscema.php'),
         ], 'autoscema-config');
+
+        // Publish stubs
+        $this->publishes([
+            __DIR__.'/../stubs' => resource_path('stubs/autoscema'),
+        ], 'autoscema-stubs');
     }
 
     /**
@@ -32,12 +39,10 @@ class AutoSchemaServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // Merge configuration
         $this->mergeConfigFrom(__DIR__.'/../config/autoscema.php', 'autoscema');
 
-        // Register services lazily to avoid early resolution
-        $this->app->singleton(ModelAnalyzer::class);
-        $this->app->singleton(ValidationAnalyzer::class);
-        $this->app->singleton(SchemaBuilder::class);
-        $this->app->singleton(TypeGenerator::class);
+        // Don't register classes in register() method
+        // They will be auto-resolved when needed
     }
 }
