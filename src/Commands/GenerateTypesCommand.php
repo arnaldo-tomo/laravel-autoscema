@@ -127,134 +127,82 @@ class GenerateTypesCommand extends Command
     /**
      * Discover all models in the application.
      */
-    /**
- * Discover all models in the application.
- */
-private function discoverAllModels(): array
-{
-    $models = [];
-    
-    // Get configuration with fallbacks
-    $config = config('autoscema', []);
-    $directories = $config['models']['directories'] ?? [app_path('Models')];
-    $baseModel = $config['models']['base_model'] ?? 'Illuminate\\Database\\Eloquent\\Model';
-    $exclude = $config['models']['exclude'] ?? [];
+    private function discoverAllModels(): array
+    {
+        $models = [];
+        
+        // Get configuration with fallbacks
+        $config = config('autoscema', []);
+        $directories = $config['models']['directories'] ?? [app_path('Models')];
+        $baseModel = $config['models']['base_model'] ?? 'Illuminate\\Database\\Eloquent\\Model';
+        $exclude = $config['models']['exclude'] ?? [];
 
-    $this->info("🔍 Searching for models in directories:");
-    foreach ($directories as $directory) {
-        $this->line("   • {$directory}");
-    }
-    $this->newLine();
-
-    foreach ($directories as $directory) {
-        if (!is_dir($directory)) {
-            $this->warn("⚠️  Directory does not exist: {$directory}");
-            continue;
+        if ($this->option('verbose')) {
+            $this->info("🔍 Searching for models in directories:");
+            foreach ($directories as $directory) {
+                $this->line("   • {$directory}");
+            }
+            $this->newLine();
         }
 
-        $finder = new Finder();
-        $finder->files()->name('*.php')->in($directory);
-
-        foreach ($finder as $file) {
-            $filePath = $file->getRealPath();
-            $class = $this->getClassFromFile($filePath);
-            
-            if (!$class) {
-                continue;
-            }
-
-            // Debug information
-            $this->info("📄 Found file: " . $file->getRelativePathname());
-            $this->line("   Class: {$class}");
-            
-            // Check if class exists
-            if (!class_exists($class)) {
-                $this->warn("   ⚠️  Class does not exist: {$class}");
-                continue;
-            }
-            
-            // Check if it's a Model
-            if (!is_subclass_of($class, $baseModel)) {
-                $this->warn("   ⚠️  Not a Model: {$class}");
-                continue;
-            }
-            
-            // Check if it's excluded
-            if (in_array($class, $exclude) || in_array(class_basename($class), $exclude)) {
-                $this->info("   ⏭️  Excluded: {$class}");
-                continue;
-            }
-            
-            $models[] = $class;
-            $this->info("   ✅ Added: {$class}");
-        }
-    }
-
-    return $models;
-}
-
-/**
- * Get class name from file - Improved version.
- */
-private function getClassFromFile(string $filePath): ?string
-{
-    $namespace = null;
-    $className = null;
-    
-    try {
-        $contents = File::get($filePath);
-        $tokens = token_get_all($contents);
-        
-        $namespaceTokens = [];
-        $classFound = false;
-        
-        for ($i = 0; $i < count($tokens); $i++) {
-            $token = $tokens[$i];
-            
-            // Handle namespace
-            if (is_array($token) && $token[0] === T_NAMESPACE) {
-                $namespaceTokens = [];
-                for ($j = $i + 1; $j < count($tokens); $j++) {
-                    $nextToken = $tokens[$j];
-                    
-                    if (is_array($nextToken) && ($nextToken[0] === T_STRING || $nextToken[0] === T_NS_SEPARATOR)) {
-                        $namespaceTokens[] = $nextToken[1];
-                    } elseif ($nextToken === '{' || $nextToken === ';') {
-                        break;
-                    }
+        foreach ($directories as $directory) {
+            if (!is_dir($directory)) {
+                if ($this->option('verbose')) {
+                    $this->warn("⚠️  Directory does not exist: {$directory}");
                 }
-                $namespace = implode('', $namespaceTokens);
+                continue;
             }
-            
-            // Handle class
-            if (is_array($token) && $token[0] === T_CLASS) {
-                // Look for the class name
-                for ($j = $i + 1; $j < count($tokens); $j++) {
-                    $nextToken = $tokens[$j];
-                    
-                    if (is_array($nextToken) && $nextToken[0] === T_STRING) {
-                        $className = $nextToken[1];
-                        $classFound = true;
-                        break;
-                    }
+
+            $finder = new Finder();
+            $finder->files()->name('*.php')->in($directory);
+
+            foreach ($finder as $file) {
+                $filePath = $file->getRealPath();
+                $class = $this->getClassFromFile($filePath);
+                
+                if (!$class) {
+                    continue;
+                }
+
+                // Debug information
+                if ($this->option('verbose')) {
+                    $this->info("📄 Found file: " . $file->getRelativePathname());
+                    $this->line("   Class: {$class}");
                 }
                 
-                if ($classFound) {
-                    break;
+                // Check if class exists
+                if (!class_exists($class)) {
+                    if ($this->option('verbose')) {
+                        $this->warn("   ⚠️  Class does not exist: {$class}");
+                    }
+                    continue;
+                }
+                
+                // Check if it's a Model
+                if (!is_subclass_of($class, $baseModel)) {
+                    if ($this->option('verbose')) {
+                        $this->warn("   ⚠️  Not a Model: {$class}");
+                    }
+                    continue;
+                }
+                
+                // Check if it's excluded
+                if (in_array($class, $exclude) || in_array(class_basename($class), $exclude)) {
+                    if ($this->option('verbose')) {
+                        $this->info("   ⏭️  Excluded: {$class}");
+                    }
+                    continue;
+                }
+                
+                $models[] = $class;
+                if ($this->option('verbose')) {
+                    $this->info("   ✅ Added: {$class}");
                 }
             }
         }
-        
-        if ($className) {
-            return $namespace ? $namespace . '\\' . $className : $className;
-        }
-        
-    } catch (\Exception $e) {
-        // Ignore files that can't be parsed
+
+        return $models;
     }
-    
-    return null;
-}
 
     /**
      * Get class name from file.
@@ -264,32 +212,54 @@ private function getClassFromFile(string $filePath): ?string
         $namespace = null;
         $className = null;
         
-        $contents = File::get($filePath);
-        $tokens = token_get_all($contents);
-        
-        for ($i = 0; $i < count($tokens); $i++) {
-            if ($tokens[$i][0] === T_NAMESPACE) {
-                for ($j = $i + 1; $j < count($tokens); $j++) {
-                    if ($tokens[$j][0] === T_STRING || $tokens[$j][0] === T_NS_SEPARATOR) {
-                        $namespace .= $tokens[$j][1];
-                    } else if ($tokens[$j] === '{' || $tokens[$j] === ';') {
+        try {
+            $contents = File::get($filePath);
+            $tokens = token_get_all($contents);
+            
+            for ($i = 0; $i < count($tokens); $i++) {
+                $token = $tokens[$i];
+                
+                // Handle namespace
+                if (is_array($token) && $token[0] === T_NAMESPACE) {
+                    $namespace = '';
+                    for ($j = $i + 1; $j < count($tokens); $j++) {
+                        $nextToken = $tokens[$j];
+                        
+                        if (is_array($nextToken) && ($nextToken[0] === T_STRING || $nextToken[0] === T_NS_SEPARATOR)) {
+                            $namespace .= $nextToken[1];
+                        } elseif ($nextToken === '{' || $nextToken === ';') {
+                            break;
+                        }
+                    }
+                }
+                
+                // Handle class
+                if (is_array($token) && $token[0] === T_CLASS) {
+                    // Look for the class name
+                    for ($j = $i + 1; $j < count($tokens); $j++) {
+                        $nextToken = $tokens[$j];
+                        
+                        if (is_array($nextToken) && $nextToken[0] === T_STRING) {
+                            $className = $nextToken[1];
+                            break;
+                        }
+                    }
+                    
+                    if ($className) {
                         break;
                     }
                 }
             }
             
-            if ($tokens[$i][0] === T_CLASS) {
-                for ($j = $i + 1; $j < count($tokens); $j++) {
-                    if ($tokens[$j][0] === T_STRING) {
-                        $className = $tokens[$j][1];
-                        break;
-                    }
-                }
-                break;
+            if ($className) {
+                return $namespace ? $namespace . '\\' . $className : $className;
             }
+            
+        } catch (\Exception $e) {
+            // Ignore files that can't be parsed
         }
         
-        return $className ? ($namespace ? $namespace . '\\' . $className : $className) : null;
+        return null;
     }
 
     /**
