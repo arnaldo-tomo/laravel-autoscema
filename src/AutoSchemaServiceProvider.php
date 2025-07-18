@@ -1,7 +1,7 @@
 <?php
 
 namespace ArnaldoTomo\LaravelAutoSchema;
-
+use ArnaldoTomo\LaravelAutoSchema\ModelAnalyzer;
 use ArnaldoTomo\LaravelAutoSchema\Commands\GenerateTypesCommand;
 use ArnaldoTomo\LaravelAutoSchema\Commands\WatchTypesCommand;
 use ArnaldoTomo\LaravelAutoSchema\Commands\InitCommand;
@@ -9,12 +9,18 @@ use Illuminate\Support\ServiceProvider;
 
 class AutoSchemaServiceProvider extends ServiceProvider
 {
+    /**
+     * Bootstrap any application services.
+     */
     public function boot(): void
     {
         $this->bootCommands();
         $this->bootPublishing();
     }
 
+    /**
+     * Register any application services.
+     */
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/../config/autoscema.php', 'autoscema');
@@ -25,6 +31,9 @@ class AutoSchemaServiceProvider extends ServiceProvider
         $this->app->singleton(SchemaBuilder::class);
     }
 
+    /**
+     * Bootstrap commands.
+     */
     private function bootCommands(): void
     {
         if ($this->app->runningInConsole()) {
@@ -36,6 +45,9 @@ class AutoSchemaServiceProvider extends ServiceProvider
         }
     }
 
+    /**
+     * Bootstrap publishing.
+     */
     private function bootPublishing(): void
     {
         $this->publishes([
